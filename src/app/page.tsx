@@ -1,63 +1,53 @@
-import Image from "next/image";
+import { ShoppingBag, Truck } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div
+      className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-4 font-sans text-[var(--foreground)]"
+      style={{
+        fontFamily: "var(--font-geist-sans)",
+      }}
+    >
+      <main className="flex w-full max-w-4xl flex-col items-center gap-12 py-12 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
+            OpenDeliver
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="max-w-2xl text-lg text-neutral-600 dark:text-neutral-400 md:text-xl">
+            The open-source protocol for local logistics. Connect, deliver, and
+            earn.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="grid w-full max-w-2xl grid-cols-1 gap-6 md:grid-cols-2">
+          <Link
+            href="/customer"
+            className="group flex flex-col gap-4 rounded-lg border border-neutral-200 bg-transparent p-6 text-left transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:hover:bg-neutral-900"
+            aria-label="Navigate to the customer portal"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <div className="flex items-center gap-4">
+              <ShoppingBag className="h-8 w-8 text-neutral-500 transition-colors group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-neutral-50" />
+              <h2 className="text-2xl font-semibold">I am a Customer</h2>
+            </div>
+            <p className="text-neutral-600 dark:text-neutral-400">
+              Order from local vendors and track in real-time.
+            </p>
+          </Link>
+
+          <Link
+            href="/driver"
+            className="group flex flex-col gap-4 rounded-lg border border-neutral-200 bg-transparent p-6 text-left transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:hover:bg-neutral-900"
+            aria-label="Navigate to the driver portal"
           >
-            Documentation
-          </a>
+            <div className="flex items-center gap-4">
+              <Truck className="h-8 w-8 text-neutral-500 transition-colors group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-neutral-50" />
+              <h2 className="text-2xl font-semibold">I am a Driver</h2>
+            </div>
+            <p className="text-neutral-600 dark:text-neutral-400">
+              Join the decentralized network and fulfill local orders.
+            </p>
+          </Link>
         </div>
       </main>
     </div>
