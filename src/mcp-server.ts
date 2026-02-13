@@ -56,16 +56,57 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "get_local_vendors": {
         const { latitude, longitude, radius_km = 5 } = args as any;
-        // Mocking Photon API call for now
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify([
-              { name: "Green Garden", category: "Vegetarian", distance: "1.2km", rating: 4.8 },
-              { name: "Burger Barn", category: "Fast Food", distance: "0.8km", rating: 4.2 },
-            ])
-          }]
-        };
+        
+        try {
+          const baseUrl = process.env.TABLESTACK_API_URL || "https://table-stack.vercel.app/api/v1";
+          const apiKey = process.env.TABLESTACK_INTERNAL_API_KEY;
+          
+          const response = await fetch(`${baseUrl}/restaurant`, {
+            headers: apiKey ? { "x-api-key": apiKey } : {}
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch restaurants: ${response.statusText}`);
+          }
+          
+          const restaurants = await response.json() as any[];
+          
+          // Haversine formula for filtering
+          const filtered = restaurants.filter(r => {
+            if (!r.lat || !r.lng) return false;
+            
+            const R = 6371; // Earth radius in km
+            const dLat = (parseFloat(r.lat) - latitude) * Math.PI / 180;
+            const dLon = (parseFloat(r.lng) - longitude) * Math.PI / 180;
+            const a = 
+              Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(latitude * Math.PI / 180) * Math.cos(parseFloat(r.lat) * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const d = R * c;
+            
+            return d <= radius_km;
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(filtered.map(r => ({
+                id: r.id,
+                name: r.name,
+                address: r.address,
+                distance: "Calculated", // We could provide the actual d here
+                category: "Restaurant"
+              })))
+            }]
+          };
+        } catch (e: any) {
+          console.error("Failed to fetch local vendors:", e);
+          return {
+            content: [{ type: "text", text: `Error fetching vendors: ${e.message}` }],
+            isError: true
+          };
+        }
       }
 
       case "quote_delivery": {
