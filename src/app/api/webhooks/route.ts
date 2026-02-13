@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { verifySignature } from "@/lib/security";
 
 export const runtime = "edge";
 
@@ -18,10 +19,20 @@ const HotspotEventSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const rawBody = await req.json();
-    console.log("[OpenDeliver Webhook] Received:", JSON.stringify(rawBody, null, 2));
+    const rawBody = await req.text();
+    const signature = req.headers.get("x-signature");
+    const timestamp = Number(req.headers.get("x-timestamp"));
 
-    const validatedBody = HotspotEventSchema.safeParse(rawBody);
+    // Fail-Fast: Security Check
+    if (!signature || !timestamp || !(await verifySignature(rawBody, signature, timestamp))) {
+      console.warn("[OpenDeliver Webhook] Unauthorized request blocked");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
+    console.log("[OpenDeliver Webhook] Received:", JSON.stringify(body, null, 2));
+
+    const validatedBody = HotspotEventSchema.safeParse(body);
     if (!validatedBody.success) {
       return NextResponse.json({ message: "Event received" }, { status: 200 });
     }

@@ -13,7 +13,8 @@ import {
 } from "./lib/mcp/tools.js";
 import { redis } from "./lib/redis-client.js";
 import pg from 'pg';
-import { signWebhookPayload, signServiceToken } from "./lib/auth.js";
+import { signServiceToken } from "./lib/auth.js";
+import { signPayload } from "./lib/security.js";
 
 const { Pool } = pg;
 const pool = new Pool({
@@ -290,14 +291,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               priceDetails: (args as any).price_details,
               priority
             });
-            const signature = await signWebhookPayload(payload, process.env.INTERNAL_SYSTEM_KEY || "fallback_secret");
+            const { signature, timestamp } = await signPayload(payload);
 
             await fetch(`${baseUrl}/delivery-log`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`,
-                "x-ts-signature": signature,
+                "x-signature": signature,
+                "x-timestamp": timestamp.toString(),
                 "x-trace-id": traceId
               },
               body: payload
