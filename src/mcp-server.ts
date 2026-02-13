@@ -13,8 +13,7 @@ import {
 } from "./lib/mcp/tools.js";
 import { redis } from "./lib/redis-client.js";
 import pg from 'pg';
-import { signWebhookPayload } from "./lib/auth.js";
-import { signServiceToken } from "../../shared/auth.js";
+import { signWebhookPayload, signServiceToken } from "./lib/auth.js";
 
 const { Pool } = pg;
 const pool = new Pool({
@@ -80,7 +79,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const now = new Date().toISOString();
           
           // 1. Query availability (reservations)
-          const token = await signServiceToken({ service: 'opendeliver' });
           const availUrl = `${baseUrl}/availability?restaurantId=${restaurant_id}&date=${now}&partySize=2`;
           const availResponse = await fetch(availUrl, {
             headers: { 
