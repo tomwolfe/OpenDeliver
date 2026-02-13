@@ -1,5 +1,20 @@
 import { redis } from "./redis-client";
-import { ExecutionState } from "../../../IntentionEngine/src/lib/engine/types";
+
+export interface ExecutionStep {
+  tool_name: string;
+  [key: string]: any;
+}
+
+export interface ExecutionPlan {
+  steps: ExecutionStep[];
+}
+
+export interface ExecutionState {
+  execution_id: string;
+  status: string;
+  plan?: ExecutionPlan;
+  current_step_index: number;
+}
 
 export async function getIntentionEngineState(executionId: string): Promise<ExecutionState | null> {
   // Key format used by IntentionEngine (assuming based on standard patterns)
