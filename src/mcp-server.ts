@@ -69,13 +69,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "quote_delivery": {
-        const { pickup_address, delivery_address } = args as any;
+        const { pickup_address, delivery_address, restaurant_id } = args as any;
+        let estimated_time_mins = 25;
+
+        if (restaurant_id) {
+          try {
+            const baseUrl = process.env.TABLESTACK_API_URL || "https://table-stack.vercel.app/api/v1";
+            const apiKey = process.env.TABLESTACK_INTERNAL_API_KEY;
+            const now = new Date().toISOString();
+            
+            // Query availability for a party of 2 as a proxy for kitchen load
+            const url = `${baseUrl}/availability?restaurantId=${restaurant_id}&date=${now}&partySize=2`;
+            const response = await fetch(url, {
+              headers: apiKey ? { "x-api-key": apiKey } : {}
+            });
+            
+            if (response.ok) {
+              const data = await response.json() as any;
+              const availableCount = data.availableTables?.length || 0;
+              // If less than 2 tables are available, add kitchen buffer
+              if (availableCount < 2) {
+                estimated_time_mins += 10;
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch TableStack availability:", e);
+          }
+        }
+
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
               price: 12.50,
-              estimated_time_mins: 25,
+              estimated_time_mins,
               provider: "OpenDeliver-Standard"
             })
           }]
@@ -83,7 +110,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "dispatch_intent": {
-        const { order_id, pickup_address, delivery_address, customer_id, max_price } = args as any;
+        const { order_id, pickup_address, delivery_address, customer_id, max_price, restaurant_id } = args as any;
         
         // Store in Redis for driver network to poll
         const intentKey = `opendeliver:intent:${order_id}`;
@@ -93,12 +120,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           delivery_address,
           customer_id,
           max_price,
+          restaurant_id,
           status: "pending",
           timestamp: new Date().toISOString()
         }, { ex: 3600 }); // Expire in 1 hour
 
         // Also add to public intents list
         await redis.lpush("opendeliver:public_intents", order_id);
+
+        // Notify TableStack via Webhook
+        if (restaurant_id) {
+          try {
+            const baseUrl = process.env.TABLESTACK_API_URL || "https://table-stack.vercel.app/api/v1";
+            const apiKey = process.env.TABLESTACK_INTERNAL_API_KEY;
+            
+            await fetch(`${baseUrl}/external-delivery`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(apiKey ? { "x-api-key": apiKey } : {})
+              },
+              body: JSON.stringify({
+                restaurantId: restaurant_id,
+                orderId: order_id,
+                status: "dispatched"
+              })
+            });
+          } catch (e) {
+            console.error("Failed to notify TableStack of dispatch:", e);
+          }
+        }
 
         return {
           content: [{

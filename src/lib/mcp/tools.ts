@@ -23,7 +23,8 @@ export const QUOTE_DELIVERY_TOOL: Tool = {
     properties: {
       pickup_address: { type: "string" },
       delivery_address: { type: "string" },
-      items: { type: "array", items: { type: "string" } }
+      items: { type: "array", items: { type: "string" } },
+      restaurant_id: { type: "string", description: "The TableStack restaurant ID to check for kitchen load." }
     },
     required: ["pickup_address", "delivery_address", "items"]
   }
@@ -39,6 +40,7 @@ export const DISPATCH_INTENT_TOOL: Tool = {
       pickup_address: { type: "string" },
       delivery_address: { type: "string" },
       customer_id: { type: "string" },
+      restaurant_id: { type: "string", description: "The TableStack restaurant ID to notify." },
       price_details: {
         type: "object",
         properties: {
