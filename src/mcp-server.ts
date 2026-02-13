@@ -10,10 +10,7 @@ import {
   DISPATCH_INTENT_TOOL,
   TOOL_METADATA
 } from "./lib/mcp/tools.js";
-import { Redis } from "@upstash/redis";
-
-// Initialize Upstash Redis
-const redis = Redis.fromEnv();
+import { redis } from "./lib/redis-client.js";
 
 const server = new Server(
   {

@@ -1,7 +1,5 @@
-import { Redis } from "@upstash/redis";
+import { redis } from "./redis-client";
 import { ExecutionState } from "../../../IntentionEngine/src/lib/engine/types";
-
-const redis = Redis.fromEnv();
 
 export async function getIntentionEngineState(executionId: string): Promise<ExecutionState | null> {
   // Key format used by IntentionEngine (assuming based on standard patterns)
