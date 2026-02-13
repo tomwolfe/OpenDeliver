@@ -31,6 +31,18 @@ export const QUOTE_DELIVERY_TOOL: Tool = {
   }
 };
 
+export const CHECK_KITCHEN_LOAD_TOOL: Tool = {
+  name: "check_kitchen_load",
+  description: "Check the current load of a restaurant's kitchen including active reservations and waitlist.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      restaurant_id: { type: "string", description: "The TableStack restaurant ID." }
+    },
+    required: ["restaurant_id"]
+  }
+};
+
 export const DISPATCH_INTENT_TOOL: Tool = {
   name: "dispatch_intent",
   description: "Dispatch a delivery intent to the driver network. REQUIRES CONFIRMATION.",
@@ -61,5 +73,6 @@ export const DISPATCH_INTENT_TOOL: Tool = {
 export const TOOL_METADATA = {
   get_local_vendors: { requires_confirmation: false },
   quote_delivery: { requires_confirmation: false },
+  check_kitchen_load: { requires_confirmation: false },
   dispatch_intent: { requires_confirmation: true }
 };

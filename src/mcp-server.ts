@@ -7,12 +7,14 @@ import {
 import { 
   GET_LOCAL_VENDORS_TOOL, 
   QUOTE_DELIVERY_TOOL, 
+  CHECK_KITCHEN_LOAD_TOOL,
   DISPATCH_INTENT_TOOL,
   TOOL_METADATA
 } from "./lib/mcp/tools.js";
 import { redis } from "./lib/redis-client.js";
 import pg from 'pg';
 import { signWebhookPayload } from "./lib/auth.js";
+import { signServiceToken } from "../../shared/auth.js";
 
 const { Pool } = pg;
 const pool = new Pool({
@@ -41,6 +43,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       GET_LOCAL_VENDORS_TOOL,
       QUOTE_DELIVERY_TOOL,
+      CHECK_KITCHEN_LOAD_TOOL,
       DISPATCH_INTENT_TOOL,
     ].map(tool => ({
       ...tool,
@@ -58,18 +61,97 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const traceId = (args as any)?._trace_id || "no-trace-id";
+  console.error(`[TRACE:${traceId}] Tool call: ${name}`);
 
   try {
     switch (name) {
+      case "check_kitchen_load": {
+        const { restaurant_id } = args as any;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
+        if (!restaurant_id || !uuidRegex.test(restaurant_id)) {
+           return { content: [{ type: "text", text: "Invalid restaurant_id (UUID expected)" }], isError: true };
+        }
+        
+        try {
+          const baseUrl = process.env.TABLESTACK_API_URL || "https://table-stack.vercel.app/api/v1";
+          const token = await signServiceToken({ service: 'opendeliver', traceId });
+          const now = new Date().toISOString();
+          
+          // 1. Query availability (reservations)
+          const token = await signServiceToken({ service: 'opendeliver' });
+          const availUrl = `${baseUrl}/availability?restaurantId=${restaurant_id}&date=${now}&partySize=2`;
+          const availResponse = await fetch(availUrl, {
+            headers: { 
+              "Authorization": `Bearer ${token}`,
+              "x-trace-id": traceId
+            }
+          });
+          
+          let reservationsCount = 0;
+          if (availResponse.ok) {
+            const data = await availResponse.json() as any;
+            // This is a proxy: if fewer tables available, higher load
+            // In a real system, we'd have a direct "active reservations" count
+            reservationsCount = 10 - (data.availableTables?.length || 0);
+          }
+
+          // 2. Query Waitlist (New Task 2 requirement)
+          const waitlistUrl = `${baseUrl}/waitlist?restaurantId=${restaurant_id}`;
+          const waitlistResponse = await fetch(waitlistUrl, {
+            headers: { 
+              "Authorization": `Bearer ${token}`,
+              "x-trace-id": traceId
+            }
+          });
+          
+          let waitlistCount = 0;
+          if (waitlistResponse.ok) {
+            const data = await waitlistResponse.json() as any;
+            waitlistCount = data.waitlistCount || 0;
+          }
+
+          const totalLoad = reservationsCount + waitlistCount;
+          let status = "low";
+          if (totalLoad > 5) status = "medium";
+          if (totalLoad > 10) status = "high";
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                restaurant_id,
+                kitchen_load_score: totalLoad,
+                status,
+                details: {
+                  estimated_active_reservations: reservationsCount,
+                  waitlist_count: waitlistCount
+                }
+              })
+            }]
+          };
+        } catch (e: any) {
+          console.error("Failed to check kitchen load:", e);
+          return {
+            content: [{ type: "text", text: `Error checking kitchen load: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+
       case "get_local_vendors": {
         const { latitude, longitude, radius_km = 5 } = args as any;
         
         try {
           const baseUrl = process.env.TABLESTACK_API_URL || "https://table-stack.vercel.app/api/v1";
-          const apiKey = process.env.TABLESTACK_INTERNAL_API_KEY;
+          const token = await signServiceToken({ service: 'opendeliver', traceId });
           
           const response = await fetch(`${baseUrl}/restaurant`, {
-            headers: apiKey ? { "x-api-key": apiKey } : {}
+            headers: { 
+              "Authorization": `Bearer ${token}`,
+              "x-trace-id": traceId
+            }
           });
           
           if (!response.ok) {
@@ -199,7 +281,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (restaurant_id) {
           try {
             const baseUrl = process.env.TABLESTACK_API_URL || "https://table-stack.vercel.app/api/v1";
-            const apiKey = process.env.TABLESTACK_INTERNAL_API_KEY;
+            const token = await signServiceToken({ service: 'opendeliver', restaurantId: restaurant_id, traceId });
             
             const payload = JSON.stringify({
               restaurantId: restaurant_id,
@@ -216,8 +298,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                ...(apiKey ? { "x-api-key": apiKey } : {}),
-                "x-ts-signature": signature
+                "Authorization": `Bearer ${token}`,
+                "x-ts-signature": signature,
+                "x-trace-id": traceId
               },
               body: payload
             });
