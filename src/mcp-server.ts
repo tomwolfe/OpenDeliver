@@ -69,8 +69,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "quote_delivery": {
-        const { pickup_address, delivery_address, restaurant_id } = args as any;
+        const { pickup_address, delivery_address, restaurant_id, system_key } = args as any;
         let estimated_time_mins = 25;
+        let special_offer_id = undefined;
+
+        if (system_key && system_key === process.env.INTERNAL_SYSTEM_KEY) {
+          special_offer_id = `failover_promo_${Math.random().toString(36).substring(2, 8)}`;
+        }
 
         if (restaurant_id) {
           try {
@@ -103,7 +108,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: JSON.stringify({
               price: 12.50,
               estimated_time_mins,
-              provider: "OpenDeliver-Standard"
+              provider: "OpenDeliver-Standard",
+              special_offer_id
             })
           }]
         };

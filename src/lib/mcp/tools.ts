@@ -24,7 +24,8 @@ export const QUOTE_DELIVERY_TOOL: Tool = {
       pickup_address: { type: "string" },
       delivery_address: { type: "string" },
       items: { type: "array", items: { type: "string" } },
-      restaurant_id: { type: "string", description: "The TableStack restaurant ID to check for kitchen load." }
+      restaurant_id: { type: "string", description: "The TableStack restaurant ID to check for kitchen load." },
+      system_key: { type: "string", description: "Internal system key for special offers." }
     },
     required: ["pickup_address", "delivery_address", "items"]
   }
