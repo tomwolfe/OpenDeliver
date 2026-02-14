@@ -15,6 +15,9 @@ import { redis } from "./lib/redis-client.js";
 import pg from 'pg';
 import { signServiceToken } from "./lib/auth.js";
 import { signPayload } from "./lib/security.js";
+import Ably from "ably";
+
+const ably = process.env.ABLY_API_KEY ? new Ably.Rest(process.env.ABLY_API_KEY) : null;
 
 const { Pool } = pg;
 const pool = new Pool({
@@ -275,6 +278,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         // Also add to public intents list
         await redis.lpush("opendeliver:public_intents", order_id);
+
+        // Notify via Ably
+        if (restaurant_id && ably) {
+          const channel = ably.channels.get(`merchant:${restaurant_id}`);
+          channel.publish("delivery_dispatched", {
+            order_id,
+            status: "dispatched",
+            timestamp: new Date().toISOString()
+          }).catch(err => console.error("Ably publish failed:", err));
+        }
 
         // Notify TableStack via Webhook
         if (restaurant_id) {
